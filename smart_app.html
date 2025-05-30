@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMART on FHIR App</title> 
+    <script src="https://cdn.jsdelivr.net/npm/fhirclient/build/fhir-client.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4; color: #333; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { color: #0056b3; text-align: center; }
+        h2 { color: #0056b3; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .info-section { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f9f9f9; }
+        .info-section p { margin: 5px 0; }
+        .error { color: red; font-weight: bold; padding: 10px; border: 1px solid red; background-color: #ffebeb; border-radius: 4px; }
+        .status { font-style: italic; text-align: center; padding: 20px; color: #555; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>SMART on FHIR App Prototype</h1> 
+
+        <div id="statusMessages" class="status">Loading and attempting to authorize with EHR...</div>
+        <div id="errorMessages"></div>
+
+        <div id="launchContext" class="info-section" style="display: none;">
+            <h2>Launch Context</h2>
+            <p><strong>FHIR Server:</strong> <span id="fhirServerUrl">N/A</span></p>
+            <p><strong>Client ID:</strong> <span id="clientId">N/A</span></p>
+            <p><strong>Granted Scopes:</strong> <span id="grantedScopes">N/A</span></p>
+        </div>
+
+        <div id="patientInfo" class="info-section" style="display: none;">
+            <h2>Patient Information</h2>
+            <p><strong>Name:</strong> <span id="patientName">N/A</span></p>
+            <p><strong>ID:</strong> <span id="patientId">N/A</span></p>
+            <p><strong>Gender:</strong> <span id="patientGender">N/A</span></p>
+            <p><strong>Birth Date:</strong> <span id="patientBirthDate">N/A</span></p>
+        </div>
+
+        <div id="userInfo" class="info-section" style="display: none;">
+            <h2>Provider/User Information</h2>
+            <p><strong>Name:</strong> <span id="userName">N/A</span></p>
+            <p><strong>ID:</strong> <span id="userId">N/A</span></p>
+            <p><strong>Resource Type:</strong> <span id="userResourceType">N/A</span></p>
+        </div>
+    </div>
+
+    <script>
+        alert("SMART App HTML: JavaScript block is starting!");
+        console.log("SMART_APP.HTML: Main script block has started executing.");
+
+        // this function is called after the app is successfully authorized
+        // its job is to fetch data from the fhir server and display it
+        function onReady(client) {
+            updateElementText('statusMessages', "Successfully authorized with EHR!");
+            
+            // display the launch context details we received.
+            updateElementDisplay('launchContext', true);
+            updateElementText('fhirServerUrl', client.state.serverUrl);
+            updateElementText('clientId', client.state.clientId);
+            updateElementText('grantedScopes', client.state.tokenResponse?.scope);
+            
+            // fetch patient data using the client object.
+            // the fhirclient.js library provides the 'client.patient.read()' helper
+            if (client.patient?.id) {
+                client.patient.read().then(
+                    (patientData) => {
+                        console.log("Patient data:", patientData);
+                        updateElementDisplay('patientInfo', true);
+                        updateElementText('patientName', getPatientName(patientData));
+                        updateElementText('patientId', patientData.id);
+                        updateElementText('patientGender', patientData.gender);
+                        updateElementText('patientBirthDate', patientData.birthDate);
+                    },
+                    (error) => {
+                        console.error("Error fetching patient data:", error);
+                        updateElementDisplay('patientInfo', true);
+                        updateElementText('patientInfo', "Error fetching patient data.");
+                    }
+                );
+            } else {
+                updateElementDisplay('patientInfo', true);
+                updateElementText('patientName', "No patient in context for this launch.");
+            }
+
+            // fetch user (provider) data using the client object
+            // the fhirclient.js library provides the 'client.user.read()' helper
+            if (client.user?.id) {
+                client.user.read().then(
+                    (userData) => {
+                        console.log("User (provider) data:", userData);
+                        updateElementDisplay('userInfo', true);
+                        updateElementText('userName', getUserName(userData));
+                        updateElementText('userId', userData.id);
+                        updateElementText('userResourceType', userData.resourceType);
+                    },
+                    (error) => {
+                        console.error("Error fetching user data:", error);
+                        updateElementDisplay('userInfo', true);
+                        updateElementText('userInfo', "Error fetching user/provider data.");
+                    }
+                );
+            } else {
+                updateElementDisplay('userInfo', true);
+                updateElementText('userName', "No user/provider data available.");
+            }
+        }
+
+        // this function displays any errors that occur during the authorization process
+        function onError(error) {
+            console.error("Authorization Error:", error);
+            updateElementText('statusMessages', "Authorization Error");
+            const errorMessagesDiv = document.getElementById('errorMessages');
+            if (errorMessagesDiv) {
+                errorMessagesDiv.innerHTML = `<p class="error">Error: ${error.message || 'Unknown error'}</p>`;
+            }
+        }
+        function main() {
+            // parse url parameters to see how the page was launched
+            const urlParams = new URLSearchParams(window.location.search);
+            const iss = urlParams.get('iss');
+            const launch = urlParams.get('launch');
+            const code = urlParams.get('code');
+
+            // check if fhirclient.js is loaded and ready
+            if (typeof FHIR === 'undefined') {
+                updateElementText('statusMessages', 'Error: FHIR client not loaded.');
+                return;
+            }
+
+            // if 'iss' and 'launch' are present and 'code' is not, this is the initial ehr launch
+            if (iss && launch && !code) {
+                updateElementText('statusMessages', "Initial EHR launch detected. Redirecting to EHR for authorization...");
+                
+                // this call redirects the browser to the ehr's authorization server to start the process
+                FHIR.oauth2.authorize({
+                    clientId: "change", // CHANGE FOR EPIC SANDBOX
+                    scope: "launch launch/patient openid fhirUser patient/*.read user/*.read",
+                    redirect_uri: window.location.pathname, // tell auth server to redirect back to this same page
+                    iss: iss,
+                    launch: launch,
+                });
+            }
+            // if not an initial launch, it's either the redirect back from the auth server or a direct page load.
+            else {
+                updateElementText('statusMessages', "Attempting to complete authorization...");
+                // fhir.oauth2.ready() handles the code/state redirect, exchanges the code for a token,
+                // and resolves with a client object, or rejects with an error.
+                FHIR.oauth2.ready().then(onReady).catch(onError);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', main);
+
+        // helper function to update the text of an html element by its id.
+        function updateElementText(id, text) {
+
+            // first, find the html element on the page that has the matching id.
+            const element = document.getElementById(id);
+
+            if (element) {
+
+                if (text) {
+                    element.textContent = text;
+                } else {
+                    element.textContent = "N/A";
+                }
+            }
+        }
+
+        // helper function to show or hide an html element
+        function updateElementDisplay(id, shouldDisplay) {
+            
+            const element = document.getElementById(id);
+
+            if (element) {
+
+                if (shouldDisplay) {
+                    element.style.display = "block";
+                } else {
+                    element.style.display = "none";
+                }
+            }
+        }
+
+        // helper function to extract and format a patient's name from a fhir patient resource
+        function getPatientName(patient) {
+
+            // first, check if we have a valid patient object with a name array
+            if (!patient || !patient.name || patient.name.length === 0) {
+                return "N/A";
+            }
+
+            // a patient can have multiple names maiden legal
+            let nameToUse = patient.name.find(nameEntry => nameEntry.use === 'official');
+
+            if (!nameToUse) {
+                nameToUse = patient.name[0];
+            }
+
+            // fhir stores first names as an array
+            const givenName = nameToUse.given ? nameToUse.given.join(' ') : '';
+            
+            // the last name is usually a single string
+            const familyName = nameToUse.family ? nameToUse.family : '';
+
+            // combine the given and family names with a space. the .trim() function
+            const fullName = `${givenName} ${familyName}`.trim();
+
+            return fullName ? fullName : "N/A";
+        }
+
+        // helper function to extract and format a provider's name from a fhir resource.
+        function getUserName(user) {
+            
+            // check for valid user object with a name.
+            if (!user || !user.name || user.name.length === 0) {
+                return "N/A";
+            }
+
+            // try to find the official name.
+            let nameToUse = user.name.find(nameEntry => nameEntry.use === 'official');
+
+            // if no official name, fall back to the first one available.
+            if (!nameToUse) {
+                nameToUse = user.name[0];
+            }
+
+            const givenName = nameToUse.given ? nameToUse.given.join(' ') : '';
+            
+            const familyName = nameToUse.family ? nameToUse.family : '';
+            
+            const fullName = `${givenName} ${familyName}`.trim();
+
+            return fullName ? fullName : "N/A";
+        }
+
+    </script>
+</body>
+</html>
