@@ -11,7 +11,7 @@ The application follows the SMART on FHIR EHR Launch protocol.
 
 2.The code detects these initial parameters and understands this is the start of an EHR launch. It uses the fhir-client.js library to immediately redirect the browser to the EHR's authorization endpoint. This request for authorization includes the specific permissions the app needs, its registered redirect_uri, and the 'launch' token it just received.
 
-3.At the EHR's website, the user is authenticated (they log in). After logging in, the user is presented with a consent screen where they must explicitly authorize the app's request to access their data.
+3.At the EHR's website, the user is authenticated. After logging in, the user is presented with a consent screen where they must explicitly authorize the app's request to access their data.
 
 4.Once authorized, the EHR redirects the browser back to our application's redirect_uri. This time, the URL contains a temporary, one-time-use 'authorization_code' and a 'state' parameter for security. The application's code, again using fhir-client.js, detects this 'code'. In the background, it makes a secure POST request to the EHR's token endpoint, exchanging the code for a durable 'access_token'.
 
