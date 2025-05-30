@@ -52,28 +52,25 @@ HOW TO RUN AND TEST
 
 TESTING WITH THE PUBLIC SMART APP LAUNCHER
 
-First, start a simple local web server from the project directory using the command: python3 -m http.server
-The app will be accessible at http://localhost:8000/smart_app.html.
-
-Second, go to the SMART App Launcher website at https://launch.smarthealthit.org/
+First, go to the SMART App Launcher website at https://launch.smarthealthit.org/
 Configure the launcher with the following settings:
 Launch Type: Provider EHR Launch
 FHIR Version: R4
-App's Launch URL: http://localhost:8000/smart_app.html
+App's Launch URL: https://literaseed.github.io/epic-demo/smart_app.html
 
-Third, click the Launch button. This will simulate an EHR launch.
+Second, click the Launch button. This will simulate an EHR launch.
 
 TESTING WITH THE EPIC SANDBOX
 
 This requires additional setup and configuration changes.
 
-WHAT NEEDS TO CHANGE TO TEST ON EPIC:
+First, download Epic Hyperspace
 
-First, HTTPS is required. Github Pages
+Second, obtain account and sign in
 
-Second, must be registered on the Epic on FHIR developer portal. In that registration, the Redirect URI must be the GithubPages link.
+Third, go to integration setup. Turn test integration on. Click SMART on FHIR. For the url enter: https://literaseed.github.io/epic-demo/smart_app.html  For the client ID enter: c2cb57dd-0d5a-424b-bf7f-843690a9e03a Launch type: select embedded. You can omit Launch context. 
 
-Third, the 'clientId' in the smart_app.html file must be changed to the Epic one.
+Finally, to run it hit Patient chart, and from the dropdown select "Trigger OpenPatient"
 
 
 
