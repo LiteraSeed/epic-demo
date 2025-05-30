@@ -68,7 +68,7 @@ First, download Epic Hyperspace
 
 Second, obtain account and sign in
 
-Third, go to integration setup. Turn test integration on. Click SMART on FHIR. For the url enter: https://literaseed.github.io/epic-demo/smart_app.html  For the client ID enter: ***REDACTED*** Launch type: select embedded. You can omit Launch context. 
+Third, go to integration setup. Turn test integration on. Click SMART on FHIR. For the url enter: https://literaseed.github.io/epic-demo/smart_app.html  For the client ID enter: c2cb57dd-0d5a-424b-bf7f-843690a9e03a Launch type: select embedded. You can omit Launch context. 
 
 Finally, to run it hit Patient chart, and from the dropdown select "Trigger OpenPatient"
 
